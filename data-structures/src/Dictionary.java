@@ -60,7 +60,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 	
 	//
 	// Starts finding from the higher list
-	// First n passed is the _lists
+	// First node passed is the _lists
 	// 
 	private Node<Key, Value> _search(Key k, int level, Node<Key, Value> node)
 	{
