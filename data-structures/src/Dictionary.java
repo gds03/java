@@ -28,7 +28,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 	// 
 	
 	public Dictionary(int numLists) {
-		_lists = new Node<Key, Value>(null, null, numLists);
+		_lists = new Node<>(null, null, numLists);
 		_currentLevel = 0;
 	}
 	
@@ -90,7 +90,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		for(  ; node.next[level] == null; level--);
 		
 		// After this, all nodes down are != NULL
-		for(  ; k.compareTo(node.next[level].key) < 0; level--);
+		for(  ; level > 0 && k.compareTo(node.next[level].key) < 0; level--);
 		
 		
 		// Repeat the process for the next node		
@@ -108,4 +108,84 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		Node<Key, Value> node = _search(key, _currentLevel, _lists.next[_currentLevel]);
 		return node != null ? node.value : null;
 	}	
+	
+	private static class NodeStatus<Key extends Comparable<Key>, Value> {
+		Node<Key, Value> node;
+		boolean inserted;
+		
+		public NodeStatus(Node<Key, Value> n, boolean inserted) {
+			this.node = n;
+			this.inserted = inserted;
+		}
+	}
+	
+	
+	private NodeStatus<Key, Value> _insert(int level, Node<Key, Value> n, Node<Key, Value> newNode)
+	{
+		
+		//
+		// Stop conditions
+		//
+		
+		if( level == 0  && newNode.key.compareTo(n.key) < 0 ) 
+			return new NodeStatus<>(null, true);
+		
+		// There are no more nodes in front.
+		if( n.next[0] == null && newNode.key.compareTo(n.key) > 0 ) 
+			return new NodeStatus<>(n, true);
+		
+		
+		// Key found and we are trying to add this key.
+		if( newNode.key.compareTo(n.key) == 0 ) {
+			return new NodeStatus<>(null, false);
+		}
+
+				
+		
+		//
+		// Search
+		// 
+		
+		// Until we don't get a valid node (!= NULL) we decrement the level
+		for(  ; n.next[level] == null; level--);
+		
+		// After this, all nodes down are != NULL
+		for(  ; level > 0 && newNode.key.compareTo(n.next[level].key) < 0; level--);
+		
+		
+		// Repeat the process for the next node		
+		NodeStatus<Key, Value> status = _insert(level, n.next[level], newNode);
+		
+		if( ! status.inserted )
+			return status;
+		
+		else {
+			
+			Node<Key, Value> ctxNode = (status.node != null) ? status.node : n;
+			
+			//
+			// Fix up relationships
+			//
+			
+		}
+	}
+	
+	public boolean insert(Key key, Value value, int levelForDebug) 
+	{
+		if(key == null) 
+			return false;
+		
+		//
+		// We cannot use search algorithm here because we must establish the
+		// connections while recursion is going back!
+		// 
+		
+		Node<Key, Value> newNode = new Node<>(key, value, levelForDebug);
+		NodeStatus<Key, Value> status = _insert(levelForDebug, _lists.next[_currentLevel], newNode);		
+		
+		if( !status.inserted )
+			return false;
+		
+		return true;
+	}
 }
