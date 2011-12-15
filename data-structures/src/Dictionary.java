@@ -128,7 +128,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		//
 		
 		if( level == 0  && newNode.key.compareTo(n.key) < 0 ) 
-			return new NodeStatus<>(null, true);
+			return new NodeStatus<>(null, true);	// set null indicating that is the previous node that we want to return!
 		
 		// There are no more nodes in front.
 		if( n.next[0] == null && newNode.key.compareTo(n.key) > 0 ) 
@@ -164,7 +164,8 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 			// Fix up relationships
 			//
 			
-			newNode.next[level] = n.next[level];			
+			if( level <= (newNode.next.length - 1) )
+				newNode.next[level] = ctxNode.next[level];					
 		}
 		
 		return status;
