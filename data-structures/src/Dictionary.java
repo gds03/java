@@ -156,18 +156,18 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		// Repeat the process for the next node		
 		NodeStatus<Key, Value> status = _insert(level, n.next[level], newNode);
 		
-		if( ! status.inserted )
-			return status;
-		
-		else {
-			
+		if( status.inserted )
+		{
 			Node<Key, Value> ctxNode = (status.node != null) ? status.node : n;
-			
+						
 			//
 			// Fix up relationships
 			//
 			
+			newNode.next[level] = n.next[level];			
 		}
+		
+		return status;
 	}
 	
 	public boolean insert(Key key, Value value, int levelForDebug) 
