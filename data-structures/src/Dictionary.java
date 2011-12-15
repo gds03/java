@@ -64,18 +64,36 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 	// 
 	private Node<Key, Value> _search(Key k, int level, Node<Key, Value> node)
 	{
-		if( level == 0  && k.compareTo(node.key) < 0 )
+		
+		//
+		// Stop conditions
+		//
+		
+		if( level == 0  && k.compareTo(node.key) < 0 ) 
 			return null;
 		
-		if( k.compareTo(node.key) == 0 )
-			return node;
+		// There are no more nodes in front.
+		if( node.next[0] == null && k.compareTo(node.key) > 0 ) 
+			return null;
+		
+		
+		
+		// Key found
+		if( k.compareTo(node.key) == 0 ) return node;
 				
-		while( node.next[level] == null )
-			level--;
 		
-		while( k.compareTo(node.next[level].key) < 0 )
-			level--;
+		//
+		// Search
+		// 
 		
+		// Until we don't get a valid node (!= NULL) we decrement the level
+		for(  ; node.next[level] == null; level--);
+		
+		// After this, all nodes down are != NULL
+		for(  ; k.compareTo(node.next[level].key) < 0; level--);
+		
+		
+		// Repeat the process for the next node		
 		return _search(k, level, node.next[level]);		
 	}
 	
@@ -87,9 +105,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		if( isEmpty() )
 			return null;
 		
-		return _search(key, _currentLevel, _lists.next[_currentLevel])
-				.value;
-	}
-	
-	
+		Node<Key, Value> node = _search(key, _currentLevel, _lists.next[_currentLevel]);
+		return node != null ? node.value : null;
+	}	
 }
