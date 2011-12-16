@@ -274,12 +274,6 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 	
 	private void removeInternal(Node<Key, Value> prevNode, Node<Key, Value> nodeToRemove, int level) {
 		
-		if( level == 0 ) {
-			
-			prevNode.next[0] = nodeToRemove.next[0];
-			return;			
-		}
-		
 		Node<Key, Value> current = prevNode;
 		Key k = nodeToRemove.key;
 		
@@ -290,6 +284,10 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 				current.next[level] = nodeToRemove.next[level];				
 				if( --level <= 0 ) break;				
 			}	
+			
+			//
+			// Only if the next node is not the node to remove we can advance to it!
+			// 
 			
 			if( current.next[level] != nodeToRemove )
 				current = current.next[level];
