@@ -332,11 +332,6 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		if( key == null ) 
 			return false;
 		
-		//
-		// We cannot use search algorithm here because we must establish the
-		// connections while recursion is going back!
-		// 
-		
 		if( isEmpty() ) 
 			return false;
 		
@@ -346,14 +341,17 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		if( !status.canBePerformed )
 			return false;
 		
+		//
+		// Already performed (removed)
+		//
 		
 		int nodeLevel = status.levels;
 		
 		if( --_levelsNodes[nodeLevel] == 0  && (nodeLevel + 1) == _currentLevel){
 			
 			//
-			// If i am the lastNode and i am the currentLevel i need to find 
-			// a level with nodes.
+			// If i am the lastNode and i am the currentLevel, i need to find 
+			// a level with nodes while updating the _currentLevel
 			//
 			_currentLevel--;
 			for(  ; --nodeLevel > 0 && _levelsNodes[nodeLevel] == 0; _currentLevel-- ); 				
