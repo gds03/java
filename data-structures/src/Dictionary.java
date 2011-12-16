@@ -39,7 +39,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 	
 	private static final int default_num_lists = 4;
 	
-	
+	private int[]			 _levelsNodes;
 	private Node<Key, Value> _lists;
 	private int 			 _currentLevel;
 	
@@ -54,6 +54,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 			numLists = default_num_lists;
 		
 		_lists = new Node<>(null, null, numLists);	// null key & null value (dummy)
+		_levelsNodes = new int[numLists];
 		_currentLevel = 1;
 	}
 	
@@ -266,6 +267,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		if( level > _currentLevel )
 			_currentLevel = level;
 		
+		_levelsNodes[level - 1]++;		
 		return true;
 	}
 	
@@ -312,7 +314,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 			
 			if( currNode.key.compareTo(k) == 0 ) {
 				removeInternal(prevNode, currNode, level);
-				return new NodeStatus<>(true);
+				return new NodeStatus<>(true, currNode.next.length - 1);
 			}
 		}
 		
@@ -327,7 +329,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 	
 	public boolean remove(Key key) {
 		
-		if(key == null) 
+		if( key == null ) 
 			return false;
 		
 		//
@@ -343,6 +345,20 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		
 		if( !status.canBePerformed )
 			return false;
+		
+		
+		int nodeLevel = status.levels;
+		
+		if( --_levelsNodes[nodeLevel] == 0  && (nodeLevel + 1) == _currentLevel){
+			
+			//
+			// If i am the lastNode and i am the currentLevel i need to find 
+			// a level with nodes.
+			//
+			_currentLevel--;
+			for(  ; --nodeLevel > 0 && _levelsNodes[nodeLevel] == 0; _currentLevel-- ); 				
+		}			
+		
 		
 		// arranjar forma de verificar se o no que removo é o ultimo desse nivel para decrementar o nivel
 		return true;		
