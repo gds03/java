@@ -32,6 +32,11 @@ public class DictionaryTests {
 		
 		Assert.assertFalse(dictionary.insert("D", 4, 1));
 		
+		Assert.assertFalse(dictionary.remove("X"));
+		Assert.assertTrue(dictionary.remove("G"));
+		
+		Assert.assertFalse(dictionary.search("G") == null);
+		
 	}
 
 }

@@ -8,6 +8,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		V 				value;
 		Node<K,V>[]  	next;
 		
+		@SuppressWarnings("unchecked")
 		public Node(K k, V v, int length) {
 			key = k;
 			value = v;
@@ -17,12 +18,18 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 	
 	private static class NodeStatus<Key extends Comparable<Key>, Value> 
 	{
-		boolean duplicated;
+		boolean canBePerformed;
 		int levelLinked;
+		int levels;
 		
-		public NodeStatus(boolean duplicated) {
-			this.duplicated = duplicated;	
+		public NodeStatus(boolean canBePerformed) {
+			this.canBePerformed = canBePerformed;	
 			this.levelLinked = -1;
+		}
+		
+		public NodeStatus(boolean canBePerformed, int levels) {
+			this(canBePerformed);
+			this.levels = levels;
 		}
 	}
 	
@@ -137,6 +144,25 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		return _searchR(key, _currentLevel - 1, _lists);		
 	}	
 
+	
+	
+	
+	private NodeStatus<Key, Value> insertNodeAfter(Node<Key, Value> n, Node<Key, Value> newNode) 
+	{
+		NodeStatus<Key, Value> s = new NodeStatus<>(true, newNode.next.length - 1);
+		
+		// Is the first node, so we start in a bottom-up manner
+		for(int i = 0;  i < n.next.length  &&  i < newNode.next.length ; i++) {
+			
+			newNode.next[i] = n.next[i];
+			n.next[i] = newNode;
+			
+			++s.levelLinked;
+		}
+		
+		return s;
+	}
+	
 	private NodeStatus<Key, Value> _insertR(
 			Node<Key, Value> prevNode,
 			Node<Key, Value> currNode, 
@@ -147,7 +173,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		if( currNode.key != null ) 
 		{			
 			if( newNode.key.compareTo(currNode.key) == 0 )
-				return new NodeStatus<>(true);	// duplicated key!
+				return new NodeStatus<>(false);	// duplicated key!
 				
 			if( currNode.next[0] == null && newNode.key.compareTo(currNode.key) > 0) {
 				
@@ -176,14 +202,14 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		NodeStatus<Key, Value> status = _insertR(currNode, currNode.next[level], level, newNode);
 		
 		// We cannot insert, so we return that information
-		if( status.duplicated )
+		if( !status.canBePerformed )
 			return status;
 		
 		//
 		// We can insert and we need to fix-up relationships until all level links are linked
 		// 
 		
-		if( status.levelLinked < (newNode.next.length - 1) ) {
+		if( status.levelLinked < status.levels ) {
 			
 			for(int i = status.levelLinked + 1; i < currNode.next.length && i < newNode.next.length; i++) {
 				newNode.next[i] = currNode.next[i];
@@ -196,24 +222,6 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		return status;		
 	}
 
-
-	private NodeStatus<Key, Value> insertNodeAfter(Node<Key, Value> n, Node<Key, Value> newNode) 
-	{
-		NodeStatus<Key, Value> s = new NodeStatus<>(false);
-		
-		// Is the first node, so we start in a bottom-up manner
-		for(int i = 0;  i < n.next.length  &&  i < newNode.next.length ; i++) {
-			
-			newNode.next[i] = n.next[i];
-			n.next[i] = newNode;
-			
-			++s.levelLinked;
-		}
-		
-		return s;
-		
-	}
-	
 	public boolean insert(Key key, Value value, int levelForDebug) 
 	{
 		if(key == null) 
@@ -237,7 +245,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 			// 
 			
 			for(int i = 0; i < level; _lists.next[i] = newNode, i++);
-			status = new NodeStatus<>(false);
+			status = new NodeStatus<>(true);
 		}
 		
 		else {
@@ -248,7 +256,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		}
 		
 		
-		if( status.duplicated )
+		if( !status.canBePerformed )
 			return false;	// This key already is on dictionary and cannot be duplicated
 		
 		//
@@ -259,5 +267,86 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 			_currentLevel = level;
 		
 		return true;
+	}
+	
+	
+	
+	
+	private void removeInternal(Node<Key, Value> prevNode, Node<Key, Value> nodeToRemove, int level) {
+		
+		if( level == 0 ) {
+			
+			prevNode.next[0] = nodeToRemove.next[0];
+			return;			
+		}
+		
+		Node<Key, Value> current = prevNode;
+		Key k = nodeToRemove.key;
+		
+		do {
+			
+			if( k.compareTo(current.next[level].key) == 0 ) {
+				
+				current.next[level] = nodeToRemove.next[level];				
+				if( --level <= 0 ) break;				
+			}	
+			
+			if( current.next[level] != nodeToRemove )
+				current = current.next[level];
+		} 
+		
+		while(true);
+	}
+	
+	private NodeStatus<Key, Value> _removeR(
+			Node<Key, Value> prevNode,
+			Node<Key, Value> currNode, 
+			int level, 
+			Key k)
+	{				
+		if ( currNode.key != null ) 
+		{
+			if( currNode.next[0] == null && k.compareTo(currNode.key) > 0) 
+				return new NodeStatus<>(false);
+				
+			if( level == 0 && k.compareTo(currNode.key) < 0 ) 
+				return new NodeStatus<>(false);
+			
+			if( currNode.key.compareTo(k) == 0 ) {
+				removeInternal(prevNode, currNode, level);
+				return new NodeStatus<>(true);
+			}
+		}
+		
+		
+		for(  ; level > 0  &&  currNode.next[level] == null; level-- );
+		
+		for(  ; level > 0  &&  k.compareTo(currNode.next[level].key) < 0; level--);
+		
+		// Try remove
+		return _removeR(currNode, currNode.next[level], level, k);	
+	}
+	
+	public boolean remove(Key key) {
+		
+		if(key == null) 
+			return false;
+		
+		//
+		// We cannot use search algorithm here because we must establish the
+		// connections while recursion is going back!
+		// 
+		
+		if( isEmpty() ) 
+			return false;
+		
+		int l = _currentLevel - 1;
+		NodeStatus<Key, Value> status = _removeR(null, _lists, l, key);
+		
+		if( !status.canBePerformed )
+			return false;
+		
+		// arranjar forma de verificar se o no que removo é o ultimo desse nivel para decrementar o nivel
+		return true;		
 	}
 }
