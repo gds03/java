@@ -15,6 +15,17 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		}		
 	}
 	
+	private static class NodeStatus<Key extends Comparable<Key>, Value> 
+	{
+		boolean duplicated;
+		int levelLinked;
+		
+		public NodeStatus(boolean duplicated) {
+			this.duplicated = duplicated;	
+			this.levelLinked = -1;
+		}
+	}
+	
 	//
 	// Private Fields
 	// 
@@ -69,49 +80,49 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 	
 	
 	//
-	// Starts finding from the higher list
-	// First node passed is the _lists
+	// Note: Starts finding from the higher list.
+	// First node passed is the _lists. (This method always have 1 recursion level because key is null "sentinel")
 	// 
-	private Node<Key, Value> _searchR(Key k, int level, Node<Key, Value> ctxNode)
+	private Value _searchR(Key k, int level, Node<Key, Value> currNode)
 	{
 		
 		//
 		// Stop conditions
 		//
 		
-		if( ctxNode.key != null) {
+		if( currNode.key != null) {
 		
-			// Key has not found!
-			if( level == 0  &&  k.compareTo(ctxNode.key) < 0 ) 
-				return null;
-			
-			// There are no more nodes in front of ctxNode. Key has not found!
-			if( ctxNode.next[0] == null  &&  k.compareTo(ctxNode.key) > 0 ) 
-				return null;
-			
 			// Key found
-			if( ctxNode.key != null && k.compareTo(ctxNode.key) == 0 ) return ctxNode;
+			if( k.compareTo(currNode.key) == 0 ) return currNode.value;
+						
+			// Between the call we passed to a higher key than the key we are searching.
+			if( level == 0  &&  k.compareTo(currNode.key) < 0 ) 
+				return null;
+			
+			// This is the last node and the key we are searching is higher than actual
+			if( currNode.next[0] == null  &&  k.compareTo(currNode.key) > 0 ) 
+				return null;			
 		}
 					
 		
 		//
-		// Search
+		// Process for each node
 		// 
 		
-		// Until we don't get a valid node (!= NULL) we decrement the level
-		for(  ; ctxNode.next[level] == null; level--);
+		// Until we don't get a valid node (!= NULL) we decrement the level.
+		for(  ; level > 0  &&  currNode.next[level] == null; level--);
 		
 		//
 		// After this, all nodes down are != NULL.
 		//
 		
 		// While k is lower than next node we decrement the level. 
-		// (If is lower means that the node is at left of the next node for sure).
-		for(  ; level > 0  &&  k.compareTo(ctxNode.next[level].key) < 0; level--);
+		// (If is lower means than the key searching is between currNode and currNode.next[level])
+		for(  ; level > 0  &&  k.compareTo(currNode.next[level].key) < 0; level--);
 		
 		
-		// Repeat the process for the next node		
-		return _searchR(k, level, ctxNode.next[level]);		
+		// Repeat the process for the next node	recursively
+		return _searchR(k, level, currNode.next[level]);		
 	}
 	
 	//
@@ -120,28 +131,12 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 	//
 	public Value search(Key key) 
 	{
-		if( isEmpty() )	return null;
+		if( isEmpty() )	
+			return null;
 		
-		Node<Key, Value> node = _searchR(key, _currentLevel - 1, _lists);
-		return node != null ? node.value : null;
+		return _searchR(key, _currentLevel - 1, _lists);		
 	}	
-	
-	
-	
-	private static class NodeStatus<Key extends Comparable<Key>, Value> 
-	{
-		boolean isLinked, duplicated;
-		int levelLinked;
-		
-		public NodeStatus(boolean duplicated) {
-			this.duplicated = duplicated;
-			this.isLinked = false;			
-			this.levelLinked = -1;
-		}
-	}
-	
-	
-	
+
 	private NodeStatus<Key, Value> _insertR(
 			Node<Key, Value> prevNode,
 			Node<Key, Value> currNode, 
@@ -149,12 +144,8 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 			Node<Key, Value> newNode)
 	{
 	
-		if( currNode.key != null ) {
-			
-			//
-			// Safety compare keys
-			//
-					
+		if( currNode.key != null ) 
+		{			
 			if( newNode.key.compareTo(currNode.key) == 0 )
 				return new NodeStatus<>(true);	// duplicated key!
 				
@@ -177,53 +168,50 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 			}
 		}
 		
-		for(  ; level > 0 && currNode.next[level] == null; level-- );
+		for(  ; level > 0  &&  currNode.next[level] == null; level-- );
 		
-		for(  ; level > 0 && newNode.key.compareTo(currNode.next[level].key) < 0; level--);
+		for(  ; level > 0  &&  newNode.key.compareTo(currNode.next[level].key) < 0; level--);
 		
-		// Search
+		// Try insert
 		NodeStatus<Key, Value> status = _insertR(currNode, currNode.next[level], level, newNode);
 		
-		// Insert if possible
+		// We cannot insert, so we return that information
 		if( status.duplicated )
 			return status;
 		
-		
 		//
-		// Fix-up relationships
+		// We can insert and we need to fix-up relationships until all level links are linked
 		// 
 		
-		if( !status.isLinked ) {
-		
-			// newNode must be linked to old references of the status.node
-			for (int i = status.levelLinked + 1;  i < currNode.next.length ; i++) {
+		if( status.levelLinked < (newNode.next.length - 1) ) {
+			
+			for(int i = status.levelLinked + 1; i < currNode.next.length && i < newNode.next.length; i++) {
 				newNode.next[i] = currNode.next[i];
 				currNode.next[i] = newNode;
 				
-				status.levelLinked++;
-				
-				if( status.levelLinked == (newNode.next.length - 1) ) {
-					status.isLinked = true;
-					break;
-				}
-			}
+				++status.levelLinked;
+			}			
 		}
 		
 		return status;		
 	}
 
 
-	private NodeStatus<Key, Value> insertNodeAfter(Node<Key, Value> node, Node<Key, Value> newNode) 
+	private NodeStatus<Key, Value> insertNodeAfter(Node<Key, Value> n, Node<Key, Value> newNode) 
 	{
 		NodeStatus<Key, Value> s = new NodeStatus<>(false);
 		
-		newNode.next[0] = node.next[0];
-		node.next[0] = newNode;			
-		
-		if( ++s.levelLinked == (newNode.next.length - 1) )
-			s.isLinked = true;
+		// Is the first node, so we start in a bottom-up manner
+		for(int i = 0;  i < n.next.length  &&  i < newNode.next.length ; i++) {
+			
+			newNode.next[i] = n.next[i];
+			n.next[i] = newNode;
+			
+			++s.levelLinked;
+		}
 		
 		return s;
+		
 	}
 	
 	public boolean insert(Key key, Value value, int levelForDebug) 
@@ -250,7 +238,6 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 			
 			for(int i = 0; i < level; _lists.next[i] = newNode, i++);
 			status = new NodeStatus<>(false);
-			status.isLinked = true;
 		}
 		
 		else {
