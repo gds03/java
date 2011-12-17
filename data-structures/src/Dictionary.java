@@ -147,21 +147,19 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 
 	
 	
-	
-	private NodeStatus<Key, Value> insertNodeAfter(Node<Key, Value> n, Node<Key, Value> newNode) 
-	{
-		NodeStatus<Key, Value> s = new NodeStatus<>(true, newNode.next.length - 1);
+	//
+	// Try connecting currNode next references to newNode node.
+	// It will try until we reached the length of the newNode or we reached the length of the currNode.
+	// For each connect, this method increments the field of status instance levelLinked by one unit.
+	// 
+	private void tryConnect(NodeStatus<Key, Value> status, Node<Key, Value> currNode, Node<Key, Value> newNode) {
 		
-		// Is the first node, so we start in a bottom-up manner
-		for(int i = 0;  i < n.next.length  &&  i < newNode.next.length ; i++) {
+		for(int i = status.levelLinked + 1; i < currNode.next.length && i < newNode.next.length; i++) {
+			newNode.next[i] = currNode.next[i];
+			currNode.next[i] = newNode;
 			
-			newNode.next[i] = n.next[i];
-			n.next[i] = newNode;
-			
-			++s.levelLinked;
-		}
-		
-		return s;
+			++status.levelLinked;
+		}			
 	}
 	
 	private NodeStatus<Key, Value> _insertR(
@@ -179,10 +177,13 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 			if( currNode.next[0] == null && newNode.key.compareTo(currNode.key) > 0) {
 				
 				//
+				// Last node and we want insert at the end.
 				// We add the node at front of currentNode
 				//
 				
-				return insertNodeAfter(currNode, newNode);				
+				NodeStatus<Key, Value> s = new NodeStatus<>(true, newNode.next.length - 1);		
+				tryConnect(s, currNode, newNode);		
+				return s;		
 			}
 				
 			if( level == 0 && newNode.key.compareTo(currNode.key) < 0 ) {
@@ -191,7 +192,9 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 				// We add the node at front of prevNode
 				//
 				
-				return insertNodeAfter(prevNode, newNode);			
+				NodeStatus<Key, Value> s = new NodeStatus<>(true, newNode.next.length - 1);		
+				tryConnect(s, prevNode, newNode);		
+				return s;		
 			}
 		}
 		
@@ -211,13 +214,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		// 
 		
 		if( status.levelLinked < status.levels ) {
-			
-			for(int i = status.levelLinked + 1; i < currNode.next.length && i < newNode.next.length; i++) {
-				newNode.next[i] = currNode.next[i];
-				currNode.next[i] = newNode;
-				
-				++status.levelLinked;
-			}			
+			tryConnect(status, currNode, newNode);
 		}
 		
 		return status;		
@@ -270,6 +267,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		_levelsNodes[level - 1]++;		
 		return true;
 	}
+	
 	
 	
 	
