@@ -49,7 +49,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 	// Private Fields
 	// 
 	
-	private static final int default_num_lists = 4;
+	private static final int default_num_lists = 16;
 	
 	private int[]			 _levelsNodes;
 	private Node<Key, Value> _lists;
@@ -60,14 +60,24 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 	// Constructors
 	// 
 	
+	private void init(int numLists) 
+	{
+		_lists = new Node<>(null, null, numLists);	// null key & null value (dummy)
+		_levelsNodes = new int[numLists];
+		_currentLevel = 1;
+	}
+	
+	public Dictionary() 
+	{
+		init(default_num_lists);
+	}
+	
 	public Dictionary(int numLists) 
 	{
 		if(numLists <= 0) 
 			numLists = default_num_lists;
 		
-		_lists = new Node<>(null, null, numLists);	// null key & null value (dummy)
-		_levelsNodes = new int[numLists];
-		_currentLevel = 1;
+		init(numLists);
 	}
 	
 	
