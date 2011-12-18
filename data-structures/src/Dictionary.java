@@ -1,3 +1,15 @@
+/**
+ * An object that maps keys to values.
+ * A map cannot contain duplicate keys; each key can map to at most one value.
+ * 
+ * @author Gonçalo Dias
+ * @date 18/12/2011
+ *
+ * @param <Key>
+ * @param <Value>
+ */
+
+
 
 public class Dictionary<Key extends Comparable<Key>, Value> {
 	
@@ -63,6 +75,9 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 	// Private auxiliary methods
 	//
 	
+	//
+	// Generate in a pseudo-random way a level from 1 to maxLevel
+	//
 	private static int newLevel(int maxLevel) 
 	{		
 		int level, j;
@@ -87,10 +102,9 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 	}
 	
 	
-	//
-	// Note: Starts finding from the higher list.
-	// First node passed is the _lists. (This method always have 1 recursion level because key is null "sentinel")
 	// 
+	// Do a binary search in a recursive mode
+	//
 	private Value _searchR(Key k, int level, Node<Key, Value> currNode)
 	{
 		
@@ -133,10 +147,11 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		return _searchR(k, level, currNode.next[level]);		
 	}
 	
-	//
-	// Searches the given key on the dictionary.
-	// Returns: null if is not found or the value associated with the key if was found.
-	//
+	/**
+	 * Search on the dictionary by the specified key.
+	 * @param key
+	 * @return null if not found, or the value if found.
+	 */
 	public Value search(Key key) 
 	{
 		if( isEmpty() )	
@@ -148,13 +163,14 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 	
 	
 	//
-	// Try connecting currNode next references to newNode node.
+	// Try connect currNode next references to newNode node.
 	// It will try until we reached the length of the newNode or we reached the length of the currNode.
 	// For each connect, this method increments the field of status instance levelLinked by one unit.
 	// 
 	private void tryConnect(NodeStatus<Key, Value> status, Node<Key, Value> currNode, Node<Key, Value> newNode) {
 		
-		for(int i = status.levelLinked + 1; i < currNode.next.length && i < newNode.next.length; i++) {
+		for(int i = status.levelLinked + 1;  i < currNode.next.length && i < newNode.next.length;  i++) {
+			
 			newNode.next[i] = currNode.next[i];
 			currNode.next[i] = newNode;
 			
@@ -162,6 +178,9 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		}			
 	}
 	
+	//
+	// Do a binary search in a recursive mode, and establish the connections as recursion is going back
+	// 
 	private NodeStatus<Key, Value> _insertR(
 			Node<Key, Value> prevNode,
 			Node<Key, Value> currNode, 
@@ -205,12 +224,12 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		// Try insert
 		NodeStatus<Key, Value> status = _insertR(currNode, currNode.next[level], level, newNode);
 		
-		// We cannot insert, so we return that information
+		// We cannot insert, so we return immediately
 		if( !status.canBePerformed )
 			return status;
 		
 		//
-		// We can insert and we need to fix-up relationships until all level links are linked
+		// We can insert and we need to fix-up relationships until all level links are linked on the newNode
 		// 
 		
 		if( status.levelLinked < status.levels ) {
@@ -220,7 +239,14 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		return status;		
 	}
 
-	public boolean insert(Key key, Value value, int levelForDebug) 
+	/**
+	 * Try insert the key with corresponding value on the dictionary.
+	 * @param key
+	 * @param value
+	 * @param levelForDebug
+	 * @return false if key is null or if the key is already on the dictionary or true if sucessfully inserted.
+	 */
+	public boolean insert(Key key, Value value) 
 	{
 		if(key == null) 
 			return false;
@@ -231,7 +257,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		// 
 		
 		
-		int level = levelForDebug; 	// Set level
+		int level = newLevel(_lists.next.length - 1); 	// Set level
 	
 		Node<Key, Value> newNode = new Node<>(key, value, level);
 		NodeStatus<Key, Value> status;
@@ -239,7 +265,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		if( isEmpty() ) {
 			
 			//
-			// Set lists links to the new node
+			// Set lists node next links to the new node
 			// 
 			
 			for(int i = 0; i < level; _lists.next[i] = newNode, i++);
@@ -255,7 +281,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		
 		
 		if( !status.canBePerformed )
-			return false;	// This key already is on dictionary and cannot be duplicated
+			return false;	// This key is already on dictionary and cannot be duplicated!
 		
 		//
 		// We update the currentLevel if the generated value is higher than actual.
@@ -264,14 +290,16 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		if( level > _currentLevel )
 			_currentLevel = level;
 		
-		_levelsNodes[level - 1]++;		
+		_levelsNodes[level - 1]++; // Increment the count value of the nodes with that level.
 		return true;
 	}
 	
 	
 	
 	
-	
+	//
+	// Disconnect nodeToRemove from prevNode below level.
+	//
 	private void removeInternal(Node<Key, Value> prevNode, Node<Key, Value> nodeToRemove, int level) {
 		
 		Node<Key, Value> current = prevNode;
@@ -282,7 +310,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 			if( k.compareTo(current.next[level].key) == 0 ) {
 				
 				current.next[level] = nodeToRemove.next[level];				
-				if( --level <= 0 ) break;				
+				if( --level < 0 ) break;				
 			}	
 			
 			//
@@ -296,6 +324,10 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		while(true);
 	}
 	
+	
+	//
+	// Do a binary search in a recursive mode and if the key is found invoke removeInternal to discard the node that contain that key.
+	//
 	private NodeStatus<Key, Value> _removeR(
 			Node<Key, Value> prevNode,
 			Node<Key, Value> currNode, 
@@ -324,7 +356,12 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		// Try remove
 		return _removeR(currNode, currNode.next[level], level, k);	
 	}
-	
+
+	/**
+	 * Remove the specified key from dictionary.
+	 * @param key
+	 * @return false if key is null or not found or true if successfully removed.
+	 */
 	public boolean remove(Key key) {
 		
 		if( key == null ) 
@@ -337,7 +374,7 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 		NodeStatus<Key, Value> status = _removeR(null, _lists, l, key);
 		
 		if( !status.canBePerformed )
-			return false;
+			return false;		// Key wasn't found!
 		
 		//
 		// Already performed (removed)
@@ -355,8 +392,6 @@ public class Dictionary<Key extends Comparable<Key>, Value> {
 			for(  ; --nodeLevel > 0 && _levelsNodes[nodeLevel] == 0; _currentLevel-- ); 				
 		}			
 		
-		
-		// arranjar forma de verificar se o no que removo é o ultimo desse nivel para decrementar o nivel
 		return true;		
 	}
 }
